@@ -1,0 +1,91 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "com.squareup.sqldelight:gradle-plugin:$sql_delight_version"
+        
+    }
+    
+}
+configurations {
+    ktlint
+}
+apply plugin: "java"
+apply plugin: 'kotlin'
+apply plugin: 'application'
+apply plugin: 'com.squareup.sqldelight'
+
+sqldelight {
+  Database { // This will be the name of the generated database class.
+    packageName = "com.camo"
+  }
+}
+
+group 'com.camo'
+version '0.0.1'
+mainClassName = "io.ktor.server.netty.EngineMain"
+
+sourceSets {
+    main.kotlin.srcDirs = main.java.srcDirs = ['src']
+    // test.kotlin.srcDirs = test.java.srcDirs = ['test']
+    main.resources.srcDirs = ['resources']
+    // test.resources.srcDirs = ['testresources']
+}
+run { systemProperties = System.properties }
+repositories {
+    google()
+    mavenCentral()
+    jcenter()
+}
+dependencies {
+    //ktlint
+    ktlint "com.pinterest:ktlint:0.42.0"
+
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "io.ktor:ktor-server-netty:$ktor_version"
+    implementation "ch.qos.logback:logback-classic:$logback_version"
+    implementation "io.ktor:ktor-auth:$ktor_version"
+    implementation "io.ktor:ktor-auth-jwt:$ktor_version"
+    implementation "io.ktor:ktor-gson:$ktor_version"
+    implementation "io.ktor:ktor-html-builder:$ktor_version"
+    implementation "io.ktor:ktor-thymeleaf:$ktor_version"
+
+    //Database
+    implementation 'mysql:mysql-connector-java:8.0.11'
+    implementation "org.ktorm:ktorm-core:3.2.0"
+    implementation "org.ktorm:ktorm-support-mysql:3.2.0"
+
+    //DI using Kodein(gonna use later)
+    implementation 'org.kodein.di:kodein-di-generic-jvm:6.4.1'
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+
+    testImplementation "io.ktor:ktor-server-tests:$ktor_version"
+}
+task fatJar(type: Jar){
+    manifest{
+        attributes 'Main-Class': mainClassName
+    }
+    from {configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }}
+    with jar
+}
+task ktlint(type: JavaExec, group: "verification") {
+    description = "Check Kotlin code style."
+    main = "com.pinterest.ktlint.Main"
+    classpath = configurations.ktlint
+    args "src/**/*.kt"
+        // to generate report in checkstyle format prepend following args:
+        // "--reporter=plain", "--reporter=checkstyle,output=${buildDir}/ktlint.xml"
+        // see https://github.com/pinterest/ktlint#usage for more
+}
+check.dependsOn ktlint
+// check.dependsOn ktlintFormat
+task ktlintFormat(type: JavaExec, group: "formatting") {
+    description = "Fix Kotlin code style deviations."
+    main = "com.pinterest.ktlint.Main"
+    classpath = configurations.ktlint
+    args "-F", "src/**/*.kt"
+}
+
+// build.dependsOn ktlintFormat
